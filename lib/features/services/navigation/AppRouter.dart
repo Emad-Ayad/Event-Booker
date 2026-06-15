@@ -5,6 +5,7 @@ import 'package:event_hub/features/search/search_screen.dart';
 import 'package:event_hub/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../../../data/model/EventModel.dart';
 import '../../details_screen/details_screen.dart';
 import '../../empty_event_screen/event_screen.dart';
 import '../../home_screen/home_screen.dart';
@@ -44,7 +45,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const ProfileScreen());
 
       case AppRoutes.eventDetails:
-        return MaterialPageRoute(builder: (_) => const EventDetailsScreen());
+        final event = settings.arguments as EventModel;
+        return MaterialPageRoute(builder: (_) => EventDetailsScreen(event: event));
 
 
 

@@ -1,4 +1,5 @@
 
+
 class EventModel {
   final String id;
   final String name;
@@ -8,6 +9,9 @@ class EventModel {
   final String? venueName;
   final String? cityName;
   final String? segmentName;
+  final String? url;
+  final String? info;
+  final String? pleaseNote;
 
   EventModel({
     required this.id,
@@ -18,6 +22,9 @@ class EventModel {
     this.venueName,
     this.cityName,
     this.segmentName,
+    this.url,
+    this.info,
+    this.pleaseNote,
   });
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
@@ -28,19 +35,25 @@ class EventModel {
 
     final firstVenue =
     venues.isNotEmpty ? venues.first as Map<String, dynamic> : null;
-
     final firstClassification =
     classifications.isNotEmpty ? classifications.first as Map<String, dynamic> : null;
+
+    final sortedImages = List<Map<String, dynamic>>.from(images)
+      ..sort((a, b) =>
+          ((b['width'] as int? ?? 0)).compareTo((a['width'] as int? ?? 0)));
 
     return EventModel(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
-      imageUrl: images.isNotEmpty ? (images.first['url'] ?? '') : '',
+      imageUrl: sortedImages.isNotEmpty ? (sortedImages.first['url'] ?? '') : '',
       localDate: json['dates']?['start']?['localDate'],
       localTime: json['dates']?['start']?['localTime'],
       venueName: firstVenue?['name'],
       cityName: firstVenue?['city']?['name'],
       segmentName: firstClassification?['segment']?['name'],
+      url: json['url'],
+      info: json['info'],
+      pleaseNote: json['pleaseNote'],
     );
   }
 }

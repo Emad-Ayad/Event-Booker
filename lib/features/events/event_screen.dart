@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../data/datasource/HomeRemoteDataSource.dart';
 import '../../data/model/EventModel.dart';
 import '../../data/repo/HomeRepo.dart';
+import '../services/navigation/AppRoutes.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -104,6 +105,11 @@ class _EventsScreenState extends State<EventsScreen> {
             imageUrl: event.imageUrl,
             date: _formatDate(event.localDate, event.localTime),
             title: event.name,
+            onTap: () => Navigator.pushNamed(
+              context,
+              AppRoutes.eventDetails,
+              arguments: event,
+            ),
           );
         },
       ),

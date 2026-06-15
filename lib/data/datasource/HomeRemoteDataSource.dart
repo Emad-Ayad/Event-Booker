@@ -25,4 +25,10 @@ class HomeRemoteDataSource {
         .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  Future<EventModel> getEventById(String id) async {
+    final response = await DioHelper.dio.get('/events/$id.json');
+    return EventModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
 }

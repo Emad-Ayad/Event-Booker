@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
 class MyTextField extends StatelessWidget {
-  const MyTextField({super.key});
+  final TextEditingController? controller;
+
+  const MyTextField({super.key, this.controller});
 
   @override
   Widget build(BuildContext context) {
+
     return TextField(
+      controller: controller,
       style: const TextStyle(color: Colors.white),
       cursorColor: Colors.white,
       decoration: InputDecoration(

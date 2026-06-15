@@ -61,4 +61,12 @@ class HomeRepo {
     return await remoteDataSource.getEvents(size: 10, segmentName: segmentName);
   }
 
+  Future<List<EventModel>> searchEvents(String keyword) async {
+    return await remoteDataSource.getEvents(keyword: keyword, size: 10);
+  }
+
+  Future<EventModel> getEventById(String id) async {
+    return await remoteDataSource.getEventById(id);
+  }
+
 }

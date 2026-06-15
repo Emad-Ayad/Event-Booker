@@ -1,12 +1,87 @@
+import 'package:event_hub/features/details_screen/views/CircleIconButton.dart';
 import 'package:event_hub/features/details_screen/views/InfoItem.dart';
 import 'package:flutter/material.dart';
 
-class EventDetailsScreen extends StatelessWidget {
-  const EventDetailsScreen({super.key});
+import '../../data/datasource/HomeRemoteDataSource.dart';
+import '../../data/model/EventModel.dart';
+import '../../data/repo/HomeRepo.dart';
+
+class EventDetailsScreen extends StatefulWidget {
+  final EventModel event; // basic data from the list
+
+  const EventDetailsScreen({super.key, required this.event});
+
+  @override
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  late final HomeRepo repo;
+  EventModel? fullEvent;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    repo = HomeRepo(HomeRemoteDataSource());
+    _loadDetails();
+  }
+
+  Future<void> _loadDetails() async {
+    try {
+      final data = await repo.getEventById(widget.event.id);
+      setState(() {
+        fullEvent = data;
+        isLoading = false;
+      });
+    } catch (_) {
+      setState(() {
+        fullEvent = widget.event;
+        isLoading = false;
+      });
+    }
+  }
+
+  EventModel get event => fullEvent ?? widget.event;
+
+  String _formatDateLong(String? date, String? time) {
+    if (date == null) return 'Date TBA';
+    try {
+      final parts = date.split('-');
+      const months = [
+        '', 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December',
+      ];
+      const days = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final dt = DateTime.parse(date);
+      final month = months[int.parse(parts[1])];
+      final day = int.parse(parts[2]);
+      final weekday = days[dt.weekday];
+      final timePart = time != null
+          ? ', ${time.substring(0, 5)}'
+          : '';
+      return '$day $month, ${parts[0]}';
+    } catch (_) {
+      return date;
+    }
+  }
+
+  String _formatTime(String? time) {
+    if (time == null) return 'Time TBA';
+    try {
+      final parts = time.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = parts[1];
+      final suffix = hour >= 12 ? 'PM' : 'AM';
+      final h = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      return '$h:$minute $suffix';
+    } catch (_) {
+      return time;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -15,119 +90,85 @@ class EventDetailsScreen extends StatelessWidget {
           Positioned.fill(
             child: Column(
               children: [
+                // Cover image
                 SizedBox(
-                  height: 260 ,
+                  height: 260,
                   width: double.infinity,
-                  child: Image.asset(
-                    'assets/images/event_cover.png',
+                  child: event.imageUrl.isNotEmpty
+                      ? Image.network(
+                    event.imageUrl,
                     fit: BoxFit.cover,
-                  ),
+                    errorBuilder: (_, __, ___) => Container(
+                      color: const Color(0xFF5669FF),
+                      child: const Icon(Icons.image_not_supported,
+                          color: Colors.white, size: 48),
+                    ),
+                  )
+                      : Container(color: const Color(0xFF5669FF)),
                 ),
+
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 70, 24, 110),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'International Band\nMusic Concert',
-                          style: TextStyle(
-                            fontSize: 34,
-                            height: 1.15,
+                        // Title
+                        Text(
+                          event.name,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                            color: Color(0xFF120D26),
                           ),
                         ),
                         const SizedBox(height: 24),
 
-                        const InfoItem(
+                        // Date
+                        InfoItem(
                           icon: Icons.calendar_month,
-                          title: '14 December, 2021',
-                          subtitle: 'Tuesday, 4:00PM - 9:00PM',
+                          title: _formatDateLong(
+                              event.localDate, event.localTime),
+                          subtitle: _formatTime(event.localTime),
                         ),
                         const SizedBox(height: 16),
 
-                        const InfoItem(
+                        // Venue
+                        InfoItem(
                           icon: Icons.location_on,
-                          title: 'Gala Convention Center',
-                          subtitle: '36 Guild Street London, UK',
+                          title: event.venueName ?? 'Venue TBA',
+                          subtitle: event.cityName ?? '',
                         ),
                         const SizedBox(height: 16),
 
-                        Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.asset(
-                                'assets/images/organizer.png',
-                                width: 48,
-                                height: 48,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Ashfak Sayem',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Organizer',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF747688),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text(
-                                'Follow',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 28),
+                        // Category row
+                        if (event.segmentName != null) ...[
+                          InfoItem(
+                            icon: Icons.category,
+                            title: event.segmentName!,
+                            subtitle: 'Category',
+                          ),
+                          const SizedBox(height: 28),
+                        ],
 
+                        // About
                         const Text(
                           'About Event',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
+                            color: Color(0xFF120D26),
                           ),
                         ),
                         const SizedBox(height: 14),
-                        const Text(
-                          'Enjoy your favorite dish and a lovely your friends and family '
-                              'and have a great time. Food from local food trucks will be '
-                              'available for purchase.Enjoy your favorite dish and a lovely your friends and family '
-                              'and have a great time. Food from local food trucks will be '
-                              'available for purchase.Enjoy your favorite dish and a lovely your friends and family '
-                              'and have a great time. Food from local food trucks will be '
-                              'available for purchase.Enjoy your favorite dish and a lovely your friends and family '
-                              'and have a great time. Food from local food trucks will be '
-                              'available for purchase.Enjoy your favorite dish and a lovely your friends and family '
-                              'and have a great time. Food from local food trucks will be '
-                              'available for purchase.',
-                          style: TextStyle(
+                        Text(
+                          event.info ??
+                              event.pleaseNote ??
+                              'No description available for this event.',
+                          style: const TextStyle(
                             fontSize: 16,
                             height: 1.7,
                             color: Color(0xFF747688),
@@ -141,12 +182,34 @@ class EventDetailsScreen extends StatelessWidget {
             ),
           ),
 
+          // Back button overlay
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CircleIconButton(
+                  icon: Icons.arrow_back_ios_new,
+                  onTap: () => Navigator.pop(context),
+                ),
+                CircleIconButton(
+                  icon: Icons.bookmark_border,
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+
+          // Attendees card
           Positioned(
             top: 225,
             left: 24,
             right: 24,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
@@ -160,34 +223,21 @@ class EventDetailsScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 92,
-                    height: 34,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        avatar('assets/images/person1.png', 0),
-                        avatar('assets/images/person2.png', 22),
-                        avatar('assets/images/person3.png', 44),
-                      ],
-                    ),
-                  ),
+                  const Icon(Icons.people, color: Color(0xFF5669FF), size: 22),
                   const SizedBox(width: 8),
-                  Text(
-                    '+20 Going',
+                  const Text(
+                    'Going',
                     style: TextStyle(
-                      color: Colors.blue,
+                      color: Color(0xFF5669FF),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
+                        horizontal: 18, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.blue,
+                      color: const Color(0xFF5669FF),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
@@ -211,9 +261,10 @@ class EventDetailsScreen extends StatelessWidget {
             child: SizedBox(
               height: 58,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed:(){},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: const Color(0xFF5669FF),
+                  disabledBackgroundColor: Colors.grey.shade300,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -223,7 +274,7 @@ class EventDetailsScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'BUY TICKET \$120',
+                      'GET TICKETS',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -232,41 +283,13 @@ class EventDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 12),
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Colors.blue,
-                      child: Icon(
-                        Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
+                    Icon(Icons.arrow_forward, color: Colors.white, size: 20),
                   ],
                 ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget avatar(String path, double left) {
-    return Positioned(
-      left: left,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white, width: 2),
-          shape: BoxShape.circle,
-        ),
-        child: ClipOval(
-          child: Image.asset(
-            path,
-            fit: BoxFit.cover,
-          ),
-        ),
       ),
     );
   }
