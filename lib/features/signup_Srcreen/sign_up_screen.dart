@@ -1,4 +1,5 @@
 
+import 'package:event_hub/features/services/navigation/AppRoutes.dart';
 import 'package:event_hub/utill/auth_button.dart';
 import 'package:event_hub/utill/auth_text_field.dart';
 import 'package:event_hub/utill/social_button.dart';
@@ -148,6 +149,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const Text('Already have an account? '),
                       TextButton(
                         onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.signIn);
                         },
                         child: const Text('Sign in'),
                       ),

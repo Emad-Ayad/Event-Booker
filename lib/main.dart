@@ -4,8 +4,9 @@ import 'package:event_hub/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'features/details_screen/details_screen.dart';
-import 'features/event_screen/event_screen.dart';
 import 'features/onboarding_screen/onboarding_screen.dart';
+import 'features/services/navigation/AppRouter.dart';
+import 'features/services/navigation/AppRoutes.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +20,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home:  EventDetailsScreen(),
+      initialRoute: AppRoutes.splash,
+      onGenerateRoute: AppRouter.generateRoute,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:event_hub/features/services/navigation/AppRoutes.dart';
 import 'package:flutter/material.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -36,6 +37,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         duration: Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }else{
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
   }
 
@@ -96,7 +99,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           TextButton(
-                              onPressed: (){},
+                              onPressed: (){
+                                Navigator.pushReplacementNamed(context, AppRoutes.home);
+                              },
                               child: Text("Skip",style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,

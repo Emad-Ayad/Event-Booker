@@ -3,6 +3,8 @@ import 'package:event_hub/utill/auth_text_field.dart';
 import 'package:event_hub/utill/social_button.dart';
 import 'package:flutter/material.dart';
 
+import '../services/navigation/AppRoutes.dart';
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -26,8 +28,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void signIn() {
     if (formKey.currentState!.validate()) {
-      print('Email: ${emailController.text}');
-      print('Password: ${passwordController.text}');
+      Navigator.pushNamed(context, AppRoutes.signIn); // TODO home
     }
   }
 
@@ -126,7 +127,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     children: [
                       const Text("Don’t have an account? "),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.signUp);
+                        },
                         child: const Text('Sign up'),
                       ),
                     ],
