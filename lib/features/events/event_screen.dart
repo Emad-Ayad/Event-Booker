@@ -4,49 +4,47 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter/material.dart';
 
-class EventsScreen extends StatelessWidget {
+import '../../data/datasource/HomeRemoteDataSource.dart';
+import '../../data/model/EventModel.dart';
+import '../../data/repo/HomeRepo.dart';
+
+class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> events = [
-      {
-        'image': 'assets/images/event1.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'A virtual evening of smooth jazz',
-      },
-      {
-        'image': 'assets/images/event2.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'Jo malone london’s mother’s day',
-      },
-      {
-        'image': 'assets/images/event1.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'A virtual evening of smooth jazz',
-      },
-      {
-        'image': 'assets/images/event2.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'Jo malone london’s mother’s day',
-      },
-      {
-        'image': 'assets/images/event1.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'Women\'s leadership conference',
-      },
-      {
-        'image': 'assets/images/event2.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'International kids safe parents night out',
-      },
-      {
-        'image': 'assets/images/event1.png',
-        'date': '1ST MAY- SAT -2:00 PM',
-        'title': 'International gala music festival',
-      },
-    ];
+  State<EventsScreen> createState() => _EventsScreenState();
+}
 
+class _EventsScreenState extends State<EventsScreen> {
+  late final HomeRepo repo;
+  List<EventModel> events = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    repo = HomeRepo(HomeRemoteDataSource());
+    loadEvents();
+  }
+
+  Future<void> loadEvents() async {
+    try {
+      final result = await repo.getAllEvents();
+      setState(() {
+        events = result;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8FB),
       appBar: AppBar(
@@ -55,10 +53,7 @@ class EventsScreen extends StatelessWidget {
         surfaceTintColor: const Color(0xFFF8F8FB),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Color(0xFF120D26),
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF120D26)),
         ),
         title: const Text(
           'Events',
@@ -71,35 +66,64 @@ class EventsScreen extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(
-              Icons.search,
-              color: Color(0xFF120D26),
-            ),
+            icon: const Icon(Icons.search, color: Color(0xFF120D26)),
           ),
           IconButton(
             onPressed: () {},
-            icon: const Icon(
-              Icons.more_vert,
-              color: Color(0xFF120D26),
-            ),
+            icon: const Icon(Icons.more_vert, color: Color(0xFF120D26)),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        child: ListView.separated(
-          itemCount: events.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 14),
-          itemBuilder: (context, index) {
-            final event = events[index];
-            return SearchCard(
-              image: event['image']!,
-              date: event['date']!,
-              title: event['title']!,
-            );
-          },
+      body: buildBody(),
+    );
+  }
+
+  Widget buildBody() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(errorMessage!, textAlign: TextAlign.center),
         ),
+      );
+    }
+    if (events.isEmpty) {
+      return const Center(child: Text('No events found.'));
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: ListView.separated(
+        itemCount: events.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        itemBuilder: (context, index) {
+          final event = events[index];
+          return SearchCard(
+            imageUrl: event.imageUrl,
+            date: _formatDate(event.localDate, event.localTime),
+            title: event.name,
+          );
+        },
       ),
     );
+  }
+
+  String _formatDate(String? date, String? time) {
+    if (date == null) return '';
+    try {
+      final parts = date.split('-');
+      final months = [
+        '', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+        'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+      ];
+      final day = int.parse(parts[2]);
+      final month = months[int.parse(parts[1])];
+      final timePart = time != null ? ' · ${time.substring(0, 5)}' : '';
+      return '$day $month$timePart';
+    } catch (_) {
+      return date;
+    }
   }
 }

@@ -38,6 +38,9 @@ class HomeRepo {
   Future<List<EventModel>> getUpcomingEvents() async {
     return await remoteDataSource.getEvents(size: 10, page: 0);
   }
+  Future<List<EventModel>> getAllEvents() async {
+    return await remoteDataSource.getEvents(size: 40, page: 0);
+  }
 
   Future<List<EventModel>> getNearbyEvents() async {
     return await remoteDataSource.getEvents(size: 10, page: 1);

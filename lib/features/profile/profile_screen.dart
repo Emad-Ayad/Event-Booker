@@ -173,7 +173,7 @@ class ProfileScreen extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final event = events[index];
                           return SearchCard(
-                            image: event['image']!,
+                            imageUrl: event['image']!,
                             date: event['date']!,
                             title: event['title']!,
                           );
