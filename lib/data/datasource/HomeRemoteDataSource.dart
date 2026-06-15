@@ -8,7 +8,7 @@ class HomeRemoteDataSource {
     int size = 20,
     int page = 0,
     String? keyword,
-    String? category,
+    String? segmentName,
   }) async {
     final response = await DioHelper.dio.get(
       '/events.json',
@@ -16,12 +16,11 @@ class HomeRemoteDataSource {
         'size': size,
         'page': page,
         if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
-        if (category != null && category.isNotEmpty) 'segmentName': category,
+        if (segmentName != null && segmentName.isNotEmpty) 'segmentName': segmentName,
       },
     );
 
     final eventsJson = (response.data['_embedded']?['events'] as List?) ?? [];
-
     return eventsJson
         .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
         .toList();

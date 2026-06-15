@@ -26,7 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<EventModel> nearbyEvents = [];
 
   bool isLoading = true;
+  bool isFilterLoading = false;
   String? errorMessage;
+  String? selectedCategory;
 
   @override
   void initState() {
@@ -45,11 +47,41 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoading = false;
       });
     } catch (e) {
-
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> onCategoryTapped(String title) async {
+    // Tapping the same chip again deselects it
+    final newSelection = selectedCategory == title ? null : title;
+
+    setState(() {
+      selectedCategory = newSelection;
+      isFilterLoading = true;
+    });
+
+    try {
+      if (newSelection == null) {
+        final upcoming = await repo.getUpcomingEvents();
+        final nearby = await repo.getNearbyEvents();
+        setState(() {
+          upcomingEvents = upcoming;
+          nearbyEvents = nearby;
+        });
+      } else {
+        final filtered = await repo.getEventsByCategory(newSelection);
+        setState(() {
+          upcomingEvents = filtered;
+          nearbyEvents = filtered;
+        });
+      }
+    } catch (e) {
+      setState(() => errorMessage = e.toString());
+    } finally {
+      setState(() => isFilterLoading = false);
     }
   }
 
@@ -189,6 +221,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               title: category.title,
                               color: category.color,
                               icon: category.icon,
+                              isSelected: selectedCategory == category.title,
+                              onTap: () => onCategoryTapped(category.title),
                             );
                           },
                         ),
@@ -197,6 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -205,17 +240,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       sectionHeader('Upcoming Events'),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        height: 280,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: upcomingEvents.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 16),
-                          itemBuilder: (context, index) {
-                            return EventCard(event: upcomingEvents[index]);
-                          },
+
+                      if (isFilterLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        SizedBox(
+                          height: 280,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: upcomingEvents.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 16),
+                            itemBuilder: (context, index) {
+                              return EventCard(event: upcomingEvents[index]);
+                            },
+                          ),
                         ),
-                      ),
+
                       const SizedBox(height: 24),
                       Container(
                         width: double.infinity,
@@ -271,6 +311,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
                       sectionHeader('Nearby You'),
                       const SizedBox(height: 16),
+
+                      if (isFilterLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
                       SizedBox(
                         height: 280,
                         child: ListView.separated(
