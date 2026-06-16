@@ -35,8 +35,9 @@ class EventModel {
 
     final firstVenue =
     venues.isNotEmpty ? venues.first as Map<String, dynamic> : null;
-    final firstClassification =
-    classifications.isNotEmpty ? classifications.first as Map<String, dynamic> : null;
+    final firstClassification = classifications.isNotEmpty
+        ? classifications.first as Map<String, dynamic>
+        : null;
 
     final sortedImages = List<Map<String, dynamic>>.from(images)
       ..sort((a, b) =>
@@ -54,6 +55,18 @@ class EventModel {
       url: json['url'],
       info: json['info'],
       pleaseNote: json['pleaseNote'],
+    );
+  }
+
+  factory EventModel.fromMap(Map<String, dynamic> map) {
+    return EventModel(
+      id: map['event_id'] ?? '',
+      name: map['title'] ?? '',
+      imageUrl: map['image_url'] ?? '',
+      localDate: map['date'],
+      localTime: map['time'],
+      venueName: map['venue_name'],
+      cityName: map['city_name'],
     );
   }
 }

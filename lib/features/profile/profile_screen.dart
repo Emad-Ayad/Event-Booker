@@ -1,10 +1,13 @@
 import 'package:event_hub/features/profile/views/ProfileStat.dart';
 import 'package:event_hub/features/search/views/SearchCard.dart';
+import 'package:event_hub/features/services/navigation/AppRoutes.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/local/AppDatabase.dart';
+import '../../data/local/SavedEventsLocalDataSource.dart';
 import '../../data/local/SessionManager.dart';
 import '../../data/local/auth_local_data_source.dart';
+import '../../data/model/EventModel.dart';
 import '../../data/model/UserModel.dart';
 import '../home_screen/views/EventCard.dart';
 
@@ -20,51 +23,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isLoading = true;
   String? errorMessage;
 
-  final List<Map<String, String>> events = [
-    {
-      'image': 'assets/images/event1.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'A virtual evening of smooth jazz',
-    },
-    {
-      'image': 'assets/images/event2.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'Jo malone london’s mother’s day',
-    },
-    {
-      'image': 'assets/images/event1.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'A virtual evening of smooth jazz',
-    },
-    {
-      'image': 'assets/images/event2.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'Jo malone london’s mother’s day',
-    },
-    {
-      'image': 'assets/images/event1.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'Women\'s leadership conference',
-    },
-    {
-      'image': 'assets/images/event2.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'International kids safe parents night out',
-    },
-    {
-      'image': 'assets/images/event1.png',
-      'date': '1ST MAY- SAT -2:00 PM',
-      'title': 'International gala music festival',
-    },
-  ];
+  List<EventModel> savedEvents = [];
+
 
   @override
   void initState() {
     super.initState();
-    loadCurrentUser();
+    loadProfileData();
   }
 
-  Future<void> loadCurrentUser() async {
+  Future<void> loadProfileData() async {
     try {
       final email = await SessionManager.getLoggedInUserEmail();
 
@@ -78,10 +46,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final db = await AppDatabase.instance.database;
       final authLocal = AuthLocalDataSource(db);
+      final savedEventsSource = SavedEventsLocalDataSource(db);
+
       final user = await authLocal.getUserByEmail(email);
+      final events = await savedEventsSource.getSavedEvents(userEmail: email);
 
       setState(() {
         currentUser = user;
+        savedEvents = events;
         isLoading = false;
       });
     } catch (e) {
@@ -92,6 +64,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+
+  String _buildDateText(EventModel event) {
+    final date = event.localDate!.isEmpty ? 'Date TBA' : event.localDate;
+    final time = event.localTime!.isEmpty ? '' : ' - ${event.localTime}';
+    return '$date$time';
+  }
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -177,28 +155,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Container(
-                      height: 52,
-                      width: 150,
-                      decoration: BoxDecoration(
-                        color:  Colors.red,
-                        border: Border.all(color: Colors.red),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.exit_to_app, color: Colors.white, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Logout',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                    GestureDetector(
+                      onTap: (){
+                        SessionManager.logout();
+                        Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                      },
+                      child: Container(
+                        height: 52,
+                        width: 150,
+                        decoration: BoxDecoration(
+                          color:  Colors.red,
+                          border: Border.all(color: Colors.red),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.exit_to_app, color: Colors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Logout',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     Container(
@@ -260,14 +244,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       ListView.separated(
-                        itemCount: events.length,
+                        itemCount: savedEvents.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 14),
                         itemBuilder: (context, index) {
-                          final event = events[index];
+                          final event = savedEvents[index];
                           return SearchCard(
-                            imageUrl: event['image']!,
-                            date: event['date']!,
-                            title: event['title']!,
+                            imageUrl: event.imageUrl,
+                            date: _buildDateText(event),
+                            title: event.name,
                           );
                         },
                       ),

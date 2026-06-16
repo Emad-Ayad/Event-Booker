@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 class CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final Color iconColor;
 
   const CircleIconButton({super.key,
     required this.icon,
     required this.onTap,
+    this.iconColor = Colors.white,
   });
 
   @override
@@ -25,7 +27,7 @@ class CircleIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: Colors.white,
+          color: iconColor,
         ),
       ),
     );

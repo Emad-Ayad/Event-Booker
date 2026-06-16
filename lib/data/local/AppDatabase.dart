@@ -29,6 +29,21 @@ class AppDatabase {
             password TEXT NOT NULL
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE saved_events(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            image_url TEXT,
+            date TEXT,
+            time TEXT,
+            venue_name TEXT,
+            city_name TEXT,
+            UNIQUE(user_email, event_id)
+          )
+        ''');
       },
     );
   }

@@ -3,11 +3,15 @@ import 'package:event_hub/features/details_screen/views/InfoItem.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/datasource/HomeRemoteDataSource.dart';
+import '../../data/local/AppDatabase.dart';
+import '../../data/local/SavedEventsLocalDataSource.dart';
+import '../../data/local/SessionManager.dart';
 import '../../data/model/EventModel.dart';
 import '../../data/repo/HomeRepo.dart';
 
+
 class EventDetailsScreen extends StatefulWidget {
-  final EventModel event; // basic data from the list
+  final EventModel event;
 
   const EventDetailsScreen({super.key, required this.event});
 
@@ -19,22 +23,92 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   late final HomeRepo repo;
   EventModel? fullEvent;
   bool isLoading = true;
+  bool isSaved = false;
+  String? userEmail;
 
   @override
   void initState() {
     super.initState();
     repo = HomeRepo(HomeRemoteDataSource());
-    _loadDetails();
+    _initializeScreen();
+  }
+
+  Future<void> _initializeScreen() async {
+    userEmail = await SessionManager.getLoggedInUserEmail();
+    await _loadDetails();
+    await _checkIfSaved();
+  }
+
+  Future<void> _checkIfSaved() async {
+    if (userEmail == null) return;
+
+    final db = await AppDatabase.instance.database;
+    final savedDataSource = SavedEventsLocalDataSource(db);
+    final saved = await savedDataSource.isEventSaved(
+      userEmail: userEmail!,
+      eventId: widget.event.id,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      isSaved = saved;
+    });
+  }
+
+  Future<void> _toggleSaveEvent() async {
+    try {
+      if (userEmail == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No logged in user found')),
+        );
+        return;
+      }
+
+      final db = await AppDatabase.instance.database;
+      final savedDataSource = SavedEventsLocalDataSource(db);
+
+      if (isSaved) {
+        await savedDataSource.removeEvent(
+          userEmail: userEmail!,
+          eventId: event.id,
+        );
+
+        if (!mounted) return;
+        setState(() => isSaved = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Removed from saved events')),
+        );
+      } else {
+        await savedDataSource.saveEvent(
+          userEmail: userEmail!,
+          event: event,
+        );
+
+        if (!mounted) return;
+        setState(() => isSaved = true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved to your events')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   Future<void> _loadDetails() async {
     try {
       final data = await repo.getEventById(widget.event.id);
+      if (!mounted) return;
       setState(() {
         fullEvent = data;
         isLoading = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         fullEvent = widget.event;
         isLoading = false;
@@ -49,17 +123,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     try {
       final parts = date.split('-');
       const months = [
-        '', 'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December',
+        '',
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
-      const days = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      final dt = DateTime.parse(date);
       final month = months[int.parse(parts[1])];
       final day = int.parse(parts[2]);
-      final weekday = days[dt.weekday];
-      final timePart = time != null
-          ? ', ${time.substring(0, 5)}'
-          : '';
       return '$day $month, ${parts[0]}';
     } catch (_) {
       return date;
@@ -90,7 +169,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           Positioned.fill(
             child: Column(
               children: [
-                // Cover image
                 SizedBox(
                   height: 260,
                   width: double.infinity,
@@ -100,13 +178,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       color: const Color(0xFF5669FF),
-                      child: const Icon(Icons.image_not_supported,
-                          color: Colors.white, size: 48),
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white,
+                        size: 48,
+                      ),
                     ),
                   )
                       : Container(color: const Color(0xFF5669FF)),
                 ),
-
                 Expanded(
                   child: isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -115,7 +195,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
                         Text(
                           event.name,
                           style: const TextStyle(
@@ -126,25 +205,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Date
                         InfoItem(
                           icon: Icons.calendar_month,
                           title: _formatDateLong(
-                              event.localDate, event.localTime),
+                            event.localDate,
+                            event.localTime,
+                          ),
                           subtitle: _formatTime(event.localTime),
                         ),
                         const SizedBox(height: 16),
-
-                        // Venue
                         InfoItem(
                           icon: Icons.location_on,
                           title: event.venueName ?? 'Venue TBA',
                           subtitle: event.cityName ?? '',
                         ),
                         const SizedBox(height: 16),
-
-                        // Category row
                         if (event.segmentName != null) ...[
                           InfoItem(
                             icon: Icons.category,
@@ -153,8 +228,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           ),
                           const SizedBox(height: 28),
                         ],
-
-                        // About
                         const Text(
                           'About Event',
                           style: TextStyle(
@@ -181,8 +254,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               ],
             ),
           ),
-
-          // Back button overlay
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 16,
@@ -195,98 +266,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   onTap: () => Navigator.pop(context),
                 ),
                 CircleIconButton(
-                  icon: Icons.bookmark_border,
-                  onTap: () {},
+                  icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  iconColor: isSaved ? const Color(0xFF5669FF) : Colors.white,
+                  onTap: _toggleSaveEvent,
                 ),
               ],
-            ),
-          ),
-
-          // Attendees card
-          Positioned(
-            top: 225,
-            left: 24,
-            right: 24,
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.people, color: Color(0xFF5669FF), size: 22),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Going',
-                    style: TextStyle(
-                      color: Color(0xFF5669FF),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF5669FF),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Invite',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Buy ticket button
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: 24,
-            child: SizedBox(
-              height: 58,
-              child: ElevatedButton(
-                onPressed:(){},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5669FF),
-                  disabledBackgroundColor: Colors.grey.shade300,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'GET TICKETS',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-                  ],
-                ),
-              ),
             ),
           ),
         ],
