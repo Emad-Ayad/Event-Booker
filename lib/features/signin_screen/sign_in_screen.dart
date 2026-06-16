@@ -3,6 +3,9 @@ import 'package:event_hub/utill/auth_text_field.dart';
 import 'package:event_hub/utill/social_button.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/local/AppDatabase.dart';
+import '../../data/local/SessionManager.dart';
+import '../../data/local/auth_local_data_source.dart';
 import '../services/navigation/AppRoutes.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -16,8 +19,28 @@ class _SignInScreenState extends State<SignInScreen> {
   final formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
   bool isPasswordHidden = true;
   bool rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadRememberedData();
+  }
+
+  Future<void> loadRememberedData() async {
+    final savedRememberMe = await SessionManager.getRememberMe();
+    final rememberedData = await SessionManager.getRememberedCredentials();
+
+    if (savedRememberMe) {
+      setState(() {
+        rememberMe = true;
+        emailController.text = rememberedData['email'] ?? '';
+        passwordController.text = rememberedData['password'] ?? '';
+      });
+    }
+  }
 
   String? validateRequired(String? value, String fieldName) {
     if (value == null || value.trim().isEmpty) {
@@ -26,10 +49,43 @@ class _SignInScreenState extends State<SignInScreen> {
     return null;
   }
 
-  void signIn() {
-    if (formKey.currentState!.validate()) {
-      Navigator.pushNamed(context, AppRoutes.signIn); // TODO home
+  Future<void> signIn() async {
+    if (!formKey.currentState!.validate()) return;
+
+    try {
+      final db = await AppDatabase.instance.database;
+      final authLocal = AuthLocalDataSource(db);
+
+      final user = await authLocal.signIn(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
+
+      if (user == null) {
+        _showMessage('Invalid email or password');
+        return;
+      }
+
+      await SessionManager.setLoggedIn(isLoggedIn: true, email: user.email);
+
+      await SessionManager.saveRememberMe(
+        rememberMe: rememberMe,
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      _showMessage('Login successful');
+
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } catch (e) {
+      _showMessage('Sign in failed: $e');
     }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -44,9 +100,13 @@ class _SignInScreenState extends State<SignInScreen> {
               key: formKey,
               child: Column(
                 children: [
-                  Image.asset('assets/images/sign_in.png',width: 160,height: 120),
-                   SizedBox(height: 40),
-                   Align(
+                  Image.asset(
+                    'assets/images/sign_in.png',
+                    width: 160,
+                    height: 120,
+                  ),
+                  const SizedBox(height: 40),
+                  const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Sign in',
@@ -103,10 +163,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  AuthButton(
-                    text: 'SIGN IN',
-                    onTap: signIn,
-                  ),
+                  AuthButton(text: 'SIGN IN', onTap: signIn),
                   const SizedBox(height: 12),
                   const Text('OR'),
                   const SizedBox(height: 12),

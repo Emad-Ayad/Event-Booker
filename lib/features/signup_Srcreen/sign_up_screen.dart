@@ -1,9 +1,12 @@
-
 import 'package:event_hub/features/services/navigation/AppRoutes.dart';
 import 'package:event_hub/utill/auth_button.dart';
 import 'package:event_hub/utill/auth_text_field.dart';
 import 'package:event_hub/utill/social_button.dart';
 import 'package:flutter/material.dart';
+
+import '../../data/local/AppDatabase.dart';
+import '../../data/local/auth_local_data_source.dart';
+import '../../data/model/UserModel.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,9 +21,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
   bool isPasswordHidden = true;
   bool isConfirmPasswordHidden = true;
+  bool isLoading = false;
 
   String? validateRequired(String? value, String fieldName) {
     if (value == null || value.trim().isEmpty) {
@@ -28,6 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
     return null;
   }
+
   String? validateConfirmPassword(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Confirm password is required';
@@ -37,16 +43,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
     return null;
   }
-  void signUp() {
-    if (formKey.currentState!.validate()) {
-      print('Full Name: ${fullNameController.text}');
-      print('Email: ${emailController.text}');
-      print('Password: ${passwordController.text}');
-      print('Confirm Password: ${confirmPasswordController.text}');
+
+  Future<void> signUp() async {
+    if (!formKey.currentState!.validate()) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      final db = await AppDatabase.instance.database;
+      final authLocal = AuthLocalDataSource(db);
+
+      final existingUser = await authLocal.getUserByEmail(
+        emailController.text.trim(),
+      );
+
+      if (existingUser != null) {
+        _showMessage('This email is already registered');
+        return;
+      }
+
+      final user = UserModel(
+        fullName: fullNameController.text.trim(),
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      await authLocal.signUp(user);
+      _showMessage('Account created successfully');
+      Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+    } catch (e) {
+      _showMessage('Sign up failed: $e');
     }
   }
 
-    @override
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -124,10 +159,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  AuthButton(
-                    text: 'SIGN UP',
-                    onTap: signUp,
-                  ),
+                  AuthButton(text: 'SIGN UP', onTap: signUp),
                   const SizedBox(height: 16),
                   const Text('OR'),
                   const SizedBox(height: 16),

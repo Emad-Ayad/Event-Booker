@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../data/local/SessionManager.dart';
 import '../services/navigation/AppRoutes.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -12,11 +13,21 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+
+  Future<void> checkLogin() async {
+    final isLoggedIn = await SessionManager.isLoggedIn();
+
+    Navigator.pushReplacementNamed(
+      context,
+      isLoggedIn ? AppRoutes.home : AppRoutes.signIn,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 2), () {
-      Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
+      checkLogin();
     });
   }
 

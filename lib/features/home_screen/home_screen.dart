@@ -55,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> onCategoryTapped(String title) async {
-    // Tapping the same chip again deselects it
     final newSelection = selectedCategory == title ? null : title;
 
     setState(() {
