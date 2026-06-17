@@ -1,48 +1,13 @@
 import 'package:event_hub/features/search/views/SearchCard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-
-import 'package:flutter/material.dart';
-
-import '../../data/datasource/HomeRemoteDataSource.dart';
 import '../../data/model/EventModel.dart';
-import '../../data/repo/HomeRepo.dart';
 import '../services/navigation/AppRoutes.dart';
+import 'cubit/event_cubit.dart';
 
-class EventsScreen extends StatefulWidget {
+class EventsScreen extends StatelessWidget {
   const EventsScreen({super.key});
-
-  @override
-  State<EventsScreen> createState() => _EventsScreenState();
-}
-
-class _EventsScreenState extends State<EventsScreen> {
-  late final HomeRepo repo;
-  List<EventModel> events = [];
-  bool isLoading = true;
-  String? errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    repo = HomeRepo(HomeRemoteDataSource());
-    loadEvents();
-  }
-
-  Future<void> loadEvents() async {
-    try {
-      final result = await repo.getAllEvents();
-      setState(() {
-        events = result;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = e.toString();
-        isLoading = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,40 +40,47 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
         ],
       ),
-      body: buildBody(),
-    );
-  }
+      body: BlocBuilder<EventsCubit, EventsState>(
+        builder: (context, state) {
+          if (state is EventsInitial || state is EventsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-  Widget buildBody() {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text(errorMessage!, textAlign: TextAlign.center),
-        ),
-      );
-    }
-    if (events.isEmpty) {
-      return const Center(child: Text('No events found.'));
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: ListView.separated(
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
-        itemBuilder: (context, index) {
-          final event = events[index];
-          return SearchCard(
-            imageUrl: event.imageUrl,
-            date: _formatDate(event.localDate, event.localTime),
-            title: event.name,
-            onTap: () => Navigator.pushNamed(
-              context,
-              AppRoutes.eventDetails,
-              arguments: event,
+          if (state is EventsError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(state.message, textAlign: TextAlign.center),
+              ),
+            );
+          }
+
+          if (state is! EventsLoaded) {
+            return const SizedBox.shrink();
+          }
+
+          if (state.events.isEmpty) {
+            return const Center(child: Text('No events found.'));
+          }
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: ListView.separated(
+              itemCount: state.events.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              itemBuilder: (context, index) {
+                final event = state.events[index];
+                return SearchCard(
+                  imageUrl: event.imageUrl,
+                  date: formatDate(event.localDate, event.localTime),
+                  title: event.name,
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.eventDetails,
+                    arguments: event,
+                  ),
+                );
+              },
             ),
           );
         },
@@ -116,13 +88,13 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  String _formatDate(String? date, String? time) {
+  String formatDate(String? date, String? time) {
     if (date == null) return '';
     try {
       final parts = date.split('-');
       final months = [
-        '', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-        'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+        '', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL',
+        'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
       ];
       final day = int.parse(parts[2]);
       final month = months[int.parse(parts[1])];

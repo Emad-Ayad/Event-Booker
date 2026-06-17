@@ -39,7 +39,7 @@ class HomeRepo {
     return await remoteDataSource.getEvents(size: 10, page: 0);
   }
   Future<List<EventModel>> getAllEvents() async {
-    return await remoteDataSource.getEvents(size: 40, page: 0);
+    return await remoteDataSource.getEvents(size: 30, page: 0);
   }
 
   Future<List<EventModel>> getNearbyEvents() async {

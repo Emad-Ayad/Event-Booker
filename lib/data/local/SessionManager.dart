@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class SessionManager {
-  SessionManager._();
 
   static const _isLoggedInKey = 'is_logged_in';
   static const _loggedInUserEmailKey = 'logged_in_user_email';
